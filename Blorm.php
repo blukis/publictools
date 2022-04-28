@@ -2,7 +2,7 @@
 //
 // Database interface class - https://github.com/blukis/blorm/
 //
-class blorm {
+class Blorm {
 
 	public $conn;
 	
