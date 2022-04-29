@@ -28,7 +28,7 @@ $db = Blorm::create($opts)->open();
 
 ### Sending Queries; Getting Results
 ```php
-// Executing a quert (INSERT or UPDATE), with no return results.
+// Execute a query (INSERT or UPDATE), with no return results.
 //-----------------------
 
 $db->queryExec("INSERT INTO table1 (field1, field2) VALUES 'value1', 'value2')");
@@ -36,12 +36,12 @@ $db->queryExec("INSERT INTO table1 (field1, field2) VALUES 'value1', 'value2')")
 // Returning results
 //-----------------------
 
-// Get results from database from a query.
+// Get results from a query.
 $sql = "SELECT field1, field2 FROM table1;";
 $max_rows = 1000; // Must provide a maximum result count to return.
 $rows = $db->queryResults($sql, $max_rows);
 
-// Loop through all results and do stuff with rows...
+// Loop through all results and do things with rows...
 foreach ($rows as $row) {
    echo("<div>" . $row["field1"] . ", " . $row["field2"] . "</div>");
 }
