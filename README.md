@@ -58,7 +58,7 @@ $field1Val = $db->firstCellOrVal($sql, $noRowsVal);
 
 ### Always prevent SQL-Injection!
 ```php
-// Of course, when constructing queries with variables, never ever do this!  SQL-injection is BAD!
+// Of course, when constructing queries with variables, never do this!  SQL-injection is BAD!
 $db->queryExec(
     "UPDATE table1 SET " .
         "stringField1 = '" . $stringVar1 . "', " . // <--- THIS IS BAD!!!
@@ -68,8 +68,10 @@ $db->queryExec(
 );
 
 // Instead, always use str(), num(), & bit() SQL-expression functions, like this:
-// - Note str() returns a SQL string expression, which includes surrounding quotes.  It also takes care of special-character-escaping.
-// - num() will error if value is non-numeric (numeric strings are allowed, converts php (null) value to SQL "NULL").
+// - str() returns a SQL string expression, which includes surrounding quotes.  It also takes
+//   care of special-character escaping.
+// - num() will error if value is non-numeric (numeric strings allowed; converts php (null)
+//   value to SQL "NULL").
 // - bit() will error if value is not among [True, False, 1, 0].
 $db->queryExec(
     "UPDATE table1 SET " .
@@ -80,7 +82,8 @@ $db->queryExec(
 );
 
 // For list expressions, e.g. for IN clauses, use strList() & numList()
-// - Note strList() takes care of string escaping for each element, and numList() enforces each element is numeric.
+// - Note strList() takes care of string escaping for each element, and numList() enforces 
+//   each element is numeric.
 $str_array = ["asdf", "asd'f", "asdf\"]; // # strList() converts to -> "('asdf', 'asd\'f', 'asdf\\')"
 $num_array = [5, 6, 7.0];                // # numList() converts to -> "(5, 6, 7.0)"
 $db->queryResults("SELECT field1, field2 FROM table1 WHERE
@@ -97,4 +100,8 @@ $lastId = $db->lastInsertId();
 // Count affected rows...
 $db->queryExec("UPDATE table1 SET field1 = 'newthing' WHERE field1 = 'oldthing');");
 $affectedRows = $db->affectedRows();
+
+// Need to access something that Blorm doesn't support?  Once open() is called, access mysqli 
+// connection object here:
+$mysqli_connection_object = $db->conn;
 ```
