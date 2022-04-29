@@ -12,12 +12,12 @@ class Blorm {
 	// - "DB_" prefix can be overriden by passing $opts = {"env_prefix": "NEWPREFIX_"}.
 	function __construct($opts=null) {
 		$opts = $opts ? $opts : [];
-		$prefix = $opts["env_prefix"] ? $opts["env_prefix"] : "DB_";
+		$prefix = isset($opts["env_prefix"]) ? $opts["env_prefix"] : "DB_";
 		// Get values from $opts, or alternately env() lookup.
-		$this->db_server = $opts["host"] ? $opts["host"] : env($prefix . "HOST");
-		$this->db_user = $opts["username"] ? $opts["username"] : env($prefix . "USERNAME");
-		$this->db_pass = $opts["password"] ? $opts["password"] : env($prefix . "PASSWORD");
-		$this->db_dbname = $opts["database"] ? $opts["database"] : env($prefix . "DATABASE");
+		$this->db_server = isset($opts["host"]) ? $opts["host"] : env($prefix . "HOST");
+		$this->db_user = isset($opts["username"]) ? $opts["username"] : env($prefix . "USERNAME");
+		$this->db_pass = isset($opts["password"]) ? $opts["password"] : env($prefix . "PASSWORD");
+		$this->db_dbname = isset($opts["database"]) ? $opts["database"] : env($prefix . "DATABASE");
 	}
 
 	public static function create($opts=false) {
@@ -47,13 +47,13 @@ class Blorm {
 	// Send queries & get results
 	//--------------------------
 	// "Execute" query only, with no return value.  Error if execution fails.
-	public function exec($sql) {
+	public function queryExec($sql) {
 		$result = $this->conn->query($sql);
 		if (!$result) throw new Exception("DB-query-error: " . $this->conn->error);
 	}
 
 	// Run a sql query, return resulting rows (array of accociative arrays).
-	public function results($sql, $max_rows) {
+	public function queryResults($sql, $max_rows) {
 		if (empty($max_rows)) {
 			throw new Exception("DB-Error: max_rows not specified.");
 		}
@@ -74,7 +74,7 @@ class Blorm {
 		return $row_array;
 	}
 
-	// First result row only, or (null) if no rows returned.
+	/*// First result row only, or (null) if no rows returned.
 	public function firstRowOrNull($sql) {
 		$rows = $this->queryResults($sql, 1);
 		return sizeof($rows) ? $rows[0] : null;
@@ -84,7 +84,7 @@ class Blorm {
 		$row = firstRowOrNull($sql);
 		if (is_null($row)) throw new Exception("No rows returned, in firstRow().");
 		return $row;
-	}
+	}*/
 
 	// First cell of first row only. (Errors if no rows returned.)
 	public function firstCell($sql) {
@@ -97,8 +97,8 @@ class Blorm {
 	}
 	// First cell of first row only, or $errorVal if no rows are returned.
 	public function firstCellOrVal($sql, $noRowsVal) {
-		$row = $this->firstRowOrNull($sql);
-		return $row ? $row[0] : $noRowsVal;
+		$rows = $this->queryResults($sql, 1);
+		return sizeof($rows) ? $rows[0][0] : $noRowsVal;
 	}
 
 
