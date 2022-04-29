@@ -1,10 +1,12 @@
 # Blorm
-Pure, clean php database interface for php.
+A small, elegant MySQL database interface for PHP.
 
 ## Usage
 
-### Connectivity:
+### Opening a connection
 ```php
+require_once 'Blorm.php';
+
 // Connect to database.
 $opts = [
   "host" => 'MYSQL_HOSTNAME',
@@ -14,7 +16,7 @@ $opts = [
 ];
 $db = Blorm::create($opts)->open();
 // (Alternatively, omit $opts param, and create() will attempt to gather these values by calling 
-// global env("DB_HOST"), env("DB_USERNAME"), etc.  Note: for this method, env() is not a 
+// global env("DB_HOST"), env("DB_USERNAME"), etc.  Note: for this alternate method, env() is not a 
 // built-in function, and will have to be made to exist.)
 
 // ...
@@ -26,23 +28,26 @@ $db = Blorm::create($opts)->open();
 
 ### Sending Queries; Getting Results
 ```php
-// Executing an INSERT or UPDATE query (no results to return)
+// Executing a quert (INSERT or UPDATE), with no return results.
 //-----------------------
 $db->exec("INSERT INTO table1 (field1, field2) VALUES 'value1', 'value2')");
 
 // Returning results
 //-----------------------
+
+// Get results from database from a query.
 $sql = "SELECT field1, field2 FROM table1;";
-$max_rows = 1000; // Must provide a maximum result count to return.  Make it large at your own risk!
+$max_rows = 1000; // Must provide a maximum result count to return.
 $rows = $db->results($sql, $max_rows);
-// Loop through all results and do stuff...
+
+// Loop through all results and do stuff with rows...
 foreach ($rows as $row) {
    echo("<div>" . $row["field1"] . ", " . $row["field2"] . "</div>");
 }
 
 // Shortcut query methods for returning just the first cell (i.e. the first field of first row)...
 //-----------------------
-// First cell (only) of first row. (Note: will error when result has no rows.)
+// First cell (only) of first row. (Note: will error if query returns no rows.)
 $field1Val = $db->firstCell("SELECT field1 FROM table1 WHERE idField = 6;");
 
 // If previous error behavior is not desired, this alternative returns $noRowsVal when result has no rows...
@@ -60,8 +65,8 @@ $rows = $db->exec("UPDATE table1 SET " .
 );
 
 // Instead, always use str(), num(), & bit() SQL-expression functions, like this:
+// - Note str() returns a SQL string expression, which includes surrounding quotes.  It also takes care of special-character-escaping.
 $sql = "UPDATE table1 SET " .
-        // Note no surrounding single quotes here. str() returns a SQL string expression, which includes surrounding quotes.
         "stringField1 = " . $db->str($stringVal1) . ", " . // <-- Good!
         "numField1 = " . $db->num($numVal1) . ", " .       // <-- Good!
         "bitField1 = " . $db->bit($bitVal1) . " " .        // <-- Good!
@@ -69,16 +74,16 @@ $sql = "UPDATE table1 SET " .
 $rows = $db->exec($sql);
 
 // For list expressions, e.g. for IN clauses, use strList() & numList()
+// - Note strList() takes care of string escaping for each element, and numList() enforces each element is numeric.
 $str_array = ["asdf", "qwer", "zxcv"];
 $num_array = [5, 6, 7];
 $db->results("SELECT field1, field2 FROM table1 WHERE
-    field3 IN " . $db->strList($str_array) . " AND "
+    field3 IN " . $db->strList($str_array) . " AND
     field4 IN " . $db->numList($num_array) . ";");
 ```
 
 ### Misc
 ```php
-
 // Getting back auto-incrementing ID value...
 $db->exec("INSERT INTO table1 (field1, field2) VALUES 'value1', 'value2')");
 $lastId = $db->lastInsertId();
