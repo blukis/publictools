@@ -59,21 +59,25 @@ $field1Val = $db->firstCellOrVal($sql, $noRowsVal);
 ### Always prevent SQL-Injection!
 ```php
 // Of course, when constructing queries with variables, never ever do this!  SQL-injection is BAD!
-$rows = $db->queryExec("UPDATE table1 SET " .
-        "stringField1 = '" . $stringVal1 . "', " . // <--- THIS IS BAD!!!
-        "numField1 = " . $numVal1 . ", " .         // <--- THIS IS BAD!!!
-        "bitField1 = " . $bitVal1 . ", " .         // <--- THIS IS BAD!!!
-    "WHERE idField = " . $idVal1 . ";"             // <--- THIS IS BAD!!!
+$db->queryExec(
+    "UPDATE table1 SET " .
+        "stringField1 = '" . $stringVar1 . "', " . // <--- THIS IS BAD!!!
+        "numField1 = " . $numVar1 . ", " .         // <--- THIS IS BAD!!!
+        "bitField1 = " . $bitVar1 . ", " .         // <--- THIS IS BAD!!!
+    "WHERE idField = " . $idVar1 . ";"             // <--- THIS IS BAD!!!
 );
 
 // Instead, always use str(), num(), & bit() SQL-expression functions, like this:
 // - Note str() returns a SQL string expression, which includes surrounding quotes.  It also takes care of special-character-escaping.
-$sql = "UPDATE table1 SET " .
-        "stringField1 = " . $db->str($stringVal1) . ", " . // <-- Good!
-        "numField1 = " . $db->num($numVal1) . ", " .       // <-- Good!
-        "bitField1 = " . $db->bit($bitVal1) . " " .        // <-- Good!
-    "WHERE idField = " . $db->num($idVal1) . ";";          // <-- Good!
-$rows = $db->queryExec($sql);
+// - num() will error if value is non-numeric (numeric strings are allowed, converts php (null) value to SQL "NULL").
+// - bit() will error if value is not among [True, False, 1, 0].
+$db->queryExec(
+    "UPDATE table1 SET " .
+        "stringField1 = " . $db->str($stringVar1) . ", " . // <-- Good!
+        "numField1 = " . $db->num($numVar1) . ", " .       // <-- Good!
+        "bitField1 = " . $db->bit($bitVar1) . " " .        // <-- Good!
+    "WHERE idField = " . $db->num($idVar1) . ";";          // <-- Good!
+);
 
 // For list expressions, e.g. for IN clauses, use strList() & numList()
 // - Note strList() takes care of string escaping for each element, and numList() enforces each element is numeric.
