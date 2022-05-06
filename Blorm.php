@@ -117,31 +117,32 @@ class Blorm {
 	// Converting values to SQL expressions of various types, for use in SQL queries.
 	//-----------------
 	public function str($input) {
+		if (is_null($input)) { return "NULL"; }
 		// Assumes $input is unescaped string.
 		return "'" . $this->conn->real_escape_string($input) . "'";
 	}
 	public function num($input) {
-		if (is_numeric($input) && $input . "" != "") {
+		// Accepts Null, integer, double, or numeric string.
+		if (is_null($input)) { return "NULL"; }
+		if (in_array(gettype($input), ["integer", "double"])) { return strval($input); }
+		if (gettype($input) == "string" && is_numeric($input) && $input . "" != "") {
 			// Note: if input is a string and passes is_numeric, the string is returned
 			// unaltered as SQL numeric expression.  Some odd strings can pass 
 			// is_numeric (" 123 ", "1337e0"), but they all appear to be valid numeric
 			// expressions in Mysql also.
-			return $input;
-		} elseif (is_null($input)) {
-			return "NULL";
+			return strval($input);
 		} else {
 			throw new Exception("Error converting value to number ('" . $input . "').");
-		}	
+		}
 	}
 	public function bit($input) {
-		if ($input === true || $input === 1) {
-			return "1";
-		} elseif ($input === false || $input === 0) {
-			return "0";
-		} else {
-			throw new Exception("Error converting value to bit.");
-		}	
+		if (is_null($input)) { return "NULL"; }
+		if ($input === true || $input === 1) { return "1"; }
+		if ($input === false || $input === 0) { return "0"; }
+
+		throw new Exception("Error converting value to bit.");
 	}
+
 
 	// Convert string array to SQL list expression, with proper string-escaping. ["str1", "str2"] => "('string1', 'string2')"
 	// - Useful for SQL 'IN' operator.
