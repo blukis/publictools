@@ -98,7 +98,7 @@ class Blorm {
 	// First cell of first row only, or $errorVal if no rows are returned.
 	public function firstCellOrVal($sql, $noRowsVal) {
 		$rows = $this->queryResults($sql, 1);
-		return sizeof($rows) ? $rows[0][0] : $noRowsVal;
+		return sizeof($rows) ? $rows[0][array_key_first($rows[0])] : $noRowsVal;
 	}
 
 
