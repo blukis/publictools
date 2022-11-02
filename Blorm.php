@@ -105,9 +105,7 @@ class Blorm {
 	// Misc util
 	//-----------------
 	public function lastInsertId() {
-		$id = $this->conn->insert_id;
-		if (!$id) throw new Exception("DB lastInsertId error: '" . $this->conn->error . "'");
-		return $id;
+		return $this->conn->insert_id;
 	}
 	public function affectedRows() {
 		return $this->conn->affected_rows;
