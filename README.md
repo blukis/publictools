@@ -1,5 +1,5 @@
 # Blorm
-A small, elegant MySQL database interface for PHP.
+A lightweight MySQL database interface for PHP.
 
 ## Usage
 
@@ -15,9 +15,6 @@ $opts = [
   "database" => 'MYSQL_DATABASE_NAME'
 ];
 $db = Blorm::create($opts)->open();
-// (Alternatively, omit $opts param, and create() will attempt to gather these values by calling 
-// global env("DB_HOST"), env("DB_USERNAME"), etc.  Note: for this alternate method, env() is not a 
-// built-in function, and will have to be made to exist.)
 
 // ...
 // DO DATABASE THINGS...
@@ -56,7 +53,7 @@ $field1Val = $db->firstCell("SELECT field1 FROM table1 WHERE idField = 6;");
 $field1Val = $db->firstCellOrVal($sql, $noRowsVal);
 ```
 
-### Always prevent SQL-Injection!
+### Preventing SQL-Injection!
 ```php
 // Of course, when constructing queries with variables, never do this!  SQL-injection is BAD!
 $db->queryExec(
@@ -93,7 +90,7 @@ $db->queryResults("SELECT field1, field2 FROM table1 WHERE
 
 ### Misc
 ```php
-// Getting back auto-incrementing ID value...
+// Getting back an auto-incrementing ID value...
 $db->queryExec("INSERT INTO table1 (field1, field2) VALUES 'value1', 'value2')");
 $lastId = $db->lastInsertId();
 
@@ -103,5 +100,5 @@ $affectedRows = $db->affectedRows();
 
 // Need to access something that Blorm doesn't support?  Once open() is called, access mysqli 
 // connection object here:
-$mysqli_connection_object = $db->conn;
+$db->conn; // Is the underlying mysqli object.
 ```
