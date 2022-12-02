@@ -1,0 +1,14 @@
+{
+    "// config_vals_for_build_and_deploy": true,
+
+    "// Optional properties...": true,
+    "//gitCmd": ["sudo", "-u", "someuser", "git"],
+    "//cloneUrl": "https://github.com/PATH",
+    "//repoDir": "repos/APPNAME or other path",
+
+    "// Required properties...": true,
+    "branchName": "main",
+    "createBuildCmd": ["cp", "-r", "source/"],
+    "deployToDir": "DST_DEPLOY_DIRECTORY"
+
+}
