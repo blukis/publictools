@@ -1,0 +1,16 @@
+* - Copy.*
+* - Copy (2).*
+* - Copy (3).*
+* - Copy (4).*
+* - Copy (5).*
+* - Copy (6).*
+* - Copy (7).*
+* - Copy (8).*
+* - Copy (9).*
+*.bak
+*.pyc
+dev_*
+ignore
+old
+/python-gitdeployer/repos
+
