@@ -14,10 +14,10 @@ Python script to deploy from a git repository to a local directory.  Deseigned t
 
 ## App/environment configs
 - Create deployment config in configs/ dir, with format "config__APPNAME__ENVNAME.json".  APPNAME & ENVNAME are technically arbitrary strings that indicate and app/environment [e.g. "PROD", "DEV", ...] to deploy.  Config top-level properies:
-    - "gitCmd" (optional): array of command args to run a local git commnand.  Examples... ["git"], ["sudo", "-u", "otheruser", "git"].  Defaults to ["git"].
-    - "repoDir": (optional) relative (to DEPLOY.py) or absolute path to local project repository root.  (Will "git clone" into this dir if it doesn't yet exist.)  Defaults to: "repos/APPNAME"
+    - "gitCmd" (deprecated,optional): array of command args to run a local git commnand.  Examples... ["git"], ["sudo", "-u", "otheruser", "git"].  Defaults to ["git"].
     - "cloneUrl": (optional) Will clone this git repository if a local repo doesn't exist.
 
+    - "repoDir": path to local project repository root. Can be a relative path (relative to DEPLOY.py), or absolute path.
     - "branchName": git branch to checkout/deploy.
     - "createBuildCmd": a command string (like "rsync -a /source/path/") or array of command args (like ["rsync", "-a", "/source/path/"]) that creates a build.   (cwd/paths relative to repoDir).
         - Build destination dir will be appended to createBuildCmd as a final command argument.

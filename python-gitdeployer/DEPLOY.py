@@ -1,10 +1,16 @@
-#
-# Script to make deployments from Virtualmin server prompt interface
+# DEPLOY.py - v1.0.10
+# - Desc: Script to make deployments from Virtualmin server prompt interface
 #
 #
 # Devnote:
 # - Virtualmin commandline interface doesn't do interactive shells.  Process has to finish, and can't ask for user input.
 # - "Cannot establish connection to the host." means running in non-interactive shell (e.g. Webmin), and script or subprocess (e.g. git) is requiring user input.
+# 
+# TODO:
+# - Maybe change appName/envName to just deployName?
+#   - (do what with: app1.dev.domain.net?)
+# - Make log be 1-deploy-per-line
+# - Add "--status" that lists deployables + last-deployed.
 
 import os, sys, getopt
 import subprocess
@@ -18,9 +24,6 @@ import utils1
 def PrintAndQuit(msg):
 	print(msg)
 	quit()
-
-#def colored(r, g, b, text):
-#    return "\033[38;2;{};{};{}m{} \033[38;2;255;255;255m".format(r, g, b, text)
 
 # Append an arg or args to existing command.
 # - cmdOrArgs can be a string (like "rsync -a /source/path/") or arg array (like ["rsync", "-a", "/source/path/"]).
@@ -51,40 +54,39 @@ def Subprocess_run2(cmdOrArgs, cwd=None, hideOutput=False):
 	#print("* cmd: " + " ".join(cmdOrArgs))
 	#cp = subprocess.run(cmdOrArgs, capture_output=True, shell=False, cwd=cwd)
 	shell = False if isinstance(cmdOrArgs, list) else True
-	cp = subprocess.run(cmdOrArgs, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=shell, cwd=cwd)
+	try:
+		cp = subprocess.run(cmdOrArgs, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=shell, cwd=cwd)
+	except Exception as exn: # Happens in windows "copy filename_DNE src dst".
+		print("***Subprocess threw exception:")
+		print("- cmd: " + str(cmdOrArgs) + "\n- (wd: " + cwd + ") \n- " + str(exn))
+		quit()
+
 	if cp.returncode != 0:
-		print("Process returned non-zero returncode '" + str(cp.returncode) + "':")
-		print("* cmd: " + (cmdOrArgs if isinstance(cmdOrArgs, str) else " ".join(cmdOrArgs)))
-		print("* wd: " + cwd)
+		print("***Process returned non-zero returncode '" + str(cp.returncode) + "':")
+		print("* cmd: " + str(cmdOrArgs) + "\n- (wd: " + cwd + ")")
 		print('* exit status:', cp.returncode)
 		print('* stdout+stderr:', cp.stdout.decode())
-		#if cp.stderr.decode():
-		#    print(colored(255,0,0, '- stderr:' + cp.stderr.decode().strip()))
-		quit()
+		#quit() # Cannot quit here e.g. Robocopy success return code is 1, ugh.  Downstream check for empty destination dir will handle issues here.
 	else:
 		if not hideOutput:
 			if cp.stdout.decode():
 				print(cp.stdout.decode().strip())
-			#if cp.stderr.decode():
-			#    print(colored(255,0,0, cp.stderr.decode().strip()))
 	return cp
 
-#def CloneRepo(gitCmd, repoUrl, repoName):
-#    repoDir = reposDir + "/" + repoName
+#def CloneRepo(gitCmd, repoUrl, repoDir):
 #    Subprocess_run2(gitCmd + ["clone", cloneUrl, repoUrl, repoName], cwd=(reposDir))
 	
 def PullCheckoutRepo(gitCmd, repoDir, branchName, cloneUrl):
 	# Create dir & clone repo if DNE...
-	if not os.path.isdir(repoDir) and cloneUrl:
+	if not os.path.isdir(repoDir):
+		print("Repo dir '" + repoDir + "' DNE; attempting repo clone...")
+		if not cloneUrl:
+			PrintAndQuit("Error, repoDir DNE and cloneUrl unspecified.")
 		if not os.path.isdir(os.path.realpath(repoDir + "/..")):
 			PrintAndQuit("Error, repo parent dir missing. (\"" + os.path.realpath(repoDir + "/..") + "\")")
 
-		#os.makedirs(repoDir)
-		print("Repo dir '" + repoDir + "' DNE; attempting repo clone...")
 		Subprocess_run2(gitCmd + ["clone", cloneUrl, repoDir], cwd=(selfDir))
 
-	if not os.path.isdir(repoDir):
-			PrintAndQuit("Error, repoDir missing. (\"" + repoDir + "\")")
 	if not os.path.isdir(repoDir + "/.git/"):
 		PrintAndQuit("Error: repo dir \"" + repoDir + "\" does not appear to be a git repository.")
 
@@ -125,20 +127,22 @@ def DeployApp(appName, envName, commitHash, checkSum):
 	with open(configPath, 'r') as f:
 		config1 = json.load(f)
 
+	if "repoDir" not in config1:
+		PrintAndQuit("Error: repoDir not found in config.")
 	if "branchName" not in config1:
 		PrintAndQuit("Error: branchName not found in config.")
 	if "deployToDir" not in config1:
 		PrintAndQuit("Error: deployToDir not found in config.")
 	if "createBuildCmd" not in config1:
 		PrintAndQuit("Error: createBuildCmd missing.")
+	# TODO: require createBuildCmd is a string or array of strings.
 
 	branchName = config1["branchName"]
 	createBuildCmd = config1["createBuildCmd"]
 	deployToDir = config1["deployToDir"]
 	cloneUrl = config1["cloneUrl"]
 	gitCmd = config1["gitCmd"] if "gitCmd" in config1 else ["git"]
-	repoDir = config1["repoDir"] if "repoDir" in config1 else reposDir + "/" + appName
-	repoDir = os.path.normpath(repoDir)
+	repoDir = os.path.normpath(config1["repoDir"])
 
 	# Pull,checkout latest version from git repo.
 	print("Pull/checkout latest version from repo...")
@@ -202,18 +206,15 @@ if sys.version_info[0] < 3:
 
 #selfDir = os.path.dirname(sys.argv[0]) + "/"
 selfDir = (os.path.dirname(__file__) if os.path.dirname(__file__) else ".") # "if" for linux, where __file__ is relative.
-reposDir = selfDir + "/repos"
 logsDir = os.path.normpath(selfDir + "/logs") # No reason for normapth().
 configsDir = os.path.normpath(selfDir + "/configs")
 #print("selfDir3: " + selfDir)
 
 # Check for required dirs.
-#if not os.path.isdir(reposDir) or not os.path.isdir(configsDir):
-#    PrintAndQuit("Error, required repos/, configs/ dirs missing.")
 if not os.path.isdir(configsDir):
 	PrintAndQuit("Error, required configs/ dirs missing.")
-if not os.path.isdir(reposDir):
-	os.makedirs(reposDir)
+#if not os.path.isdir(reposDir):
+#	os.makedirs(reposDir)
 if not os.path.isdir(logsDir):
 	os.makedirs(logsDir)
 
