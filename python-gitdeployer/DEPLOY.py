@@ -1,4 +1,4 @@
-# DEPLOY.py - v1.0.10
+# DEPLOY.py - v1.0.11
 # - Desc: Script to make deployments from Virtualmin server prompt interface
 #
 #
@@ -9,7 +9,6 @@
 # TODO:
 # - Maybe change appName/envName to just deployName?
 #   - (do what with: app1.dev.domain.net?)
-# - Make log be 1-deploy-per-line
 # - Add "--status" that lists deployables + last-deployed.
 
 import os, sys, getopt
@@ -151,7 +150,7 @@ def DeployApp(appName, envName, commitHash, checkSum):
 		CheckoutHash(gitCmd, repoDir, commitHash)
 
 	# Interrogate latest commit info.
-	hash = GitHash(gitCmd, repoDir)
+	gitHash = GitHash(gitCmd, repoDir)
 	gitSubject = GitCommitSubject(gitCmd, repoDir)
 	gitDateIso1 = GitDateIso(gitCmd, repoDir)
 	gitDate = datetime.datetime.strptime(gitDateIso1, '%Y-%m-%d %H:%M:%S %z')
@@ -159,8 +158,8 @@ def DeployApp(appName, envName, commitHash, checkSum):
 	print("")
 	print("Project/app '" + appName + "' last commit:")
 	print("- CommitMsg: \"" + gitSubject + "\"")
-	print("- Date: " + gitDateIso2)
-	print("- Hash: " + hash)
+	print("- Date: " + gitDateIso1)
+	print("- Hash: " + gitHash)
 	# TODO: warn if age of last commit is > a few days old.?
 
 	print("")
@@ -168,7 +167,7 @@ def DeployApp(appName, envName, commitHash, checkSum):
 	#answer = input("Type hash[0:3] to deploy... ")
 	#if answer.lower() != hash[0:3]:
 	#    PrintAndQuit("Deploy cancelled.")
-	if (checkSum != hash[0:3] and checkSum != "NOCHECK"):
+	if (checkSum != gitHash[0:3] and checkSum != "NOCHECK"):
 		print("To deploy this commit, call again with additional hash.left(3) argument.")
 		quit()
 
@@ -192,8 +191,8 @@ def DeployApp(appName, envName, commitHash, checkSum):
 	timeNowIso = datetime.datetime.now().replace(microsecond=0).isoformat()
 	logFilePath = logsDir + "/" + appName + "__" + envName + ".log"
 	with open (logFilePath, "a+") as file1:
-		file1.write(timeNowIso + " - Deployed \"" + appName + "\" to " + envName + "\n")
-		file1.write("\t- Commit: " + gitDateIso2 + " / " + hash + "\n")
+		commitStr = datetime.datetime.strftime(gitDate, '%Y%m%d') + "_" + gitHash[0:8]
+		file1.write(timeNowIso + " - deployed " + appName + "__" + envName + " - \"" + commitStr + "\"\n")
 	print("* Deployment logged in \"" + logsDir + "\"")
 
 	print("Deploy complete!")
