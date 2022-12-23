@@ -24,4 +24,5 @@ Python script to deploy from a git repository to a local directory.  Deseigned t
         - Examples: can be a build script defined in the project ["python", "buildMe/buildme.py"], or as simple as copying files from a project subdirectory ["rsync", "-a", "source/path/"] (see https://stackoverflow.com/q/20300971).  (Note, in either case, destination dir is appended as final parameter, and command must create a build in that location.)
             - Note (rsync command): formats can be confusing, see https://stackoverflow.com/a/20301093.
             - Note (cp command): "*" in cp source path is a shell thing, not a command arg thing. [link needed].
+            - Note: in Windows, "copy" command doesn't seem to work.  Try xcopy, robocopy.
     - "deployToDir": final deploy destination on the server.

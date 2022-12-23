@@ -1,4 +1,4 @@
-# DEPLOY.py - v1.0.11
+# DEPLOY.py - v1.1.0
 # - Desc: Script to make deployments from Virtualmin server prompt interface
 #
 #
@@ -115,12 +115,13 @@ def GitCommitSubject(gitCmd, repoDir):
 	return cp.stdout.decode().strip()
 
 
-def DeployApp(appName, envName, commitHash, checkSum):
-	if not appName or not envName:
-		PrintAndQuit("Error: missing appName or envName. (" + str(appName) + " / " + str(envName) + ")")
+def DeployApp(appEnvName, commitHash, checkSum):
+	if not appEnvName:
+		PrintAndQuit("Error: missing appEnvName. (" + str(appEnvName) + ")")
 
 	# Load config-xxx.json file
-	configPath = configsDir + "/config__" + appName + "__" + envName + ".json"
+	#configPath = configsDir + "/config__" + appName + "__" + envName + ".json"
+	configPath = configsDir + "/config__" + appEnvName + ".json"
 	if not os.path.exists(configPath):
 		PrintAndQuit("Error: config file " + configPath + " does not exist.")
 	with open(configPath, 'r') as f:
@@ -156,20 +157,21 @@ def DeployApp(appName, envName, commitHash, checkSum):
 	gitDate = datetime.datetime.strptime(gitDateIso1, '%Y-%m-%d %H:%M:%S %z')
 	gitDateIso2 = gitDate.isoformat()
 	print("")
-	print("Project/app '" + appName + "' last commit:")
+	print("Project/app '" + appEnvName + "' last commit:")
 	print("- CommitMsg: \"" + gitSubject + "\"")
 	print("- Date: " + gitDateIso1)
 	print("- Hash: " + gitHash)
 	# TODO: warn if age of last commit is > a few days old.?
 
 	print("")
-	#print("DEPLOY the above commit to \"" + deployToDir + "\"?")
+	#print("DEPLOY the above commit to \"" + deployToDir + "\"?") # Disabled: can't ask for user input, in non-interactive-shell environment (Webmin/Virtualmin).
 	#answer = input("Type hash[0:3] to deploy... ")
 	#if answer.lower() != hash[0:3]:
 	#    PrintAndQuit("Deploy cancelled.")
+	if (not checkSum):
+		PrintAndQuit("To deploy this commit, call again with additional hash.left(3) argument.")
 	if (checkSum != gitHash[0:3] and checkSum != "NOCHECK"):
-		print("To deploy this commit, call again with additional hash.left(3) argument.")
-		quit()
+		PrintAndQuit("hash.left(3) argument does not match current repo.  Aborting!")
 
 	# Create build, per project build command, passing tempDir as first partameter (build destination, by convention).
 	tempDir = tempfile.TemporaryDirectory()
@@ -189,10 +191,13 @@ def DeployApp(appName, envName, commitHash, checkSum):
 	# Log the deployment.
 	# If log file DNE, create.
 	timeNowIso = datetime.datetime.now().replace(microsecond=0).isoformat()
-	logFilePath = logsDir + "/" + appName + "__" + envName + ".log"
+	#logFilePath = logsDir + "/" + appName + "__" + envName + ".log"
+	logFilePath = logsDir + "/" + appEnvName + ".log"
 	with open (logFilePath, "a+") as file1:
 		commitStr = datetime.datetime.strftime(gitDate, '%Y%m%d') + "_" + gitHash[0:8]
-		file1.write(timeNowIso + " - deployed " + appName + "__" + envName + " - \"" + commitStr + "\"\n")
+		gitSubjShort = gitSubject[0:40] + ("..." if len(gitSubject) > 40 else "")
+		#file1.write(timeNowIso + " - deployed " + appName + "__" + envName + " - \"" + commitStr + "\"\n")
+		file1.write(timeNowIso + " - deployed " + appEnvName + " - " + commitStr + " - \"" + gitSubjShort + "\"\n")
 	print("* Deployment logged in \"" + logsDir + "\"")
 
 	print("Deploy complete!")
@@ -222,8 +227,6 @@ if __name__ == "__main__":
 	#buildsDir = selfDir + "/../builds/"
 	#buildIdStr = "litapp2"
 
-	appName = "example-app"
-	envName = "DEV"
 	commitHash = ""
 	checkSum = ""
 	nocheck = False
@@ -242,11 +245,11 @@ if __name__ == "__main__":
 		else:
 			print("opts error.") #assert False, "unhandled option"
 	if len(args) > 0:
-		appName = args[0]
+		appEnvName = args[0]
+	#if len(args) > 1:
+	#	envName = args[1]
 	if len(args) > 1:
-		envName = args[1]
-	if len(args) > 2:
-		checkSum = args[2]
+		checkSum = args[1]
 
-	DeployApp(appName, envName, commitHash, checkSum)
+	DeployApp(appEnvName, commitHash, checkSum)
 

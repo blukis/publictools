@@ -3,7 +3,7 @@
 
     "// Optional properties...": true,
     "//cloneUrl": "https://github.com/PATH",
- 
+
     "// Required properties...": true,
     "repoDir": "repos/REPODIR_OR_ANY_PATH",
     "branchName": "main",
