@@ -72,10 +72,10 @@ def Subprocess_run2(cmdOrArgs, cwd=None, hideOutput=False):
 				print(cp.stdout.decode().strip())
 	return cp
 
-#def CloneRepo(gitCmd, repoUrl, repoDir):
+#def CloneGitRepo(gitCmd, repoUrl, repoDir):
 #    Subprocess_run2(gitCmd + ["clone", cloneUrl, repoUrl, repoName], cwd=(reposDir))
 	
-def PullCheckoutRepo(gitCmd, repoDir, branchName, cloneUrl):
+def PullCheckoutGitRepo(gitCmd, repoDir, branchName, cloneUrl):
 	# Create dir & clone repo if DNE...
 	if not os.path.isdir(repoDir):
 		print("Repo dir '" + repoDir + "' DNE; attempting repo clone...")
@@ -96,7 +96,7 @@ def PullCheckoutRepo(gitCmd, repoDir, branchName, cloneUrl):
 	Subprocess_run2(gitCmd + ["pull"], cwd=(repoDir))
 
 
-def CheckoutHash(gitCmd, repoDir, commitHash):
+def CheckoutGitHash(gitCmd, repoDir, commitHash):
 	Subprocess_run2(gitCmd + ["checkout", commitHash], cwd=(repoDir))
 
 def GitHash(gitCmd, repoDir):
@@ -145,9 +145,9 @@ def DeployApp(appName, envName, commitHash, checkSum):
 
 	# Pull,checkout latest version from git repo.
 	print("Pull/checkout latest version from repo...")
-	PullCheckoutRepo(gitCmd, repoDir, branchName, cloneUrl)
+	PullCheckoutGitRepo(gitCmd, repoDir, branchName, cloneUrl)
 	if commitHash:
-		CheckoutHash(gitCmd, repoDir, commitHash)
+		CheckoutGitHash(gitCmd, repoDir, commitHash)
 
 	# Interrogate latest commit info.
 	gitHash = GitHash(gitCmd, repoDir)
