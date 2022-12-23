@@ -7,8 +7,6 @@
 # - "Cannot establish connection to the host." means running in non-interactive shell (e.g. Webmin), and script or subprocess (e.g. git) is requiring user input.
 # 
 # TODO:
-# - Maybe change appName/envName to just deployName?
-#   - (do what with: app1.dev.domain.net?)
 # - Add "--status" that lists deployables + last-deployed.
 
 import os, sys, getopt
