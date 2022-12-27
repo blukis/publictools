@@ -14,9 +14,18 @@ import subprocess
 import datetime
 import tempfile
 import json
+import shutil, distutils.dir_util
 
-import utils1
+#import utils1
 
+class utils1:
+	@staticmethod
+	def copyContentsIntoExisting(srcDir, dstDir):
+		if not os.path.isdir(srcDir):
+			raise Exception("CopyContentsInto src is not a dir! (" + srcDir + ")")
+		if not os.path.isdir(dstDir):
+			raise Exception("CopyContentsInto dst is not a dir! (" + dstDir + ")")
+		distutils.dir_util.copy_tree(srcDir, dstDir)
 
 def PrintAndQuit(msg):
 	print(msg)
@@ -112,6 +121,23 @@ def GitCommitSubject(gitCmd, repoDir):
 	cp = Subprocess_run2(gitCmd + ["log", "--pretty=%s", "-n", "1"], cwd=(repoDir), hideOutput=True)
 	return cp.stdout.decode().strip()
 
+def ListApps():
+	appEnvNames = []
+	for filename in os.listdir(configsDir):
+		if filename.startswith("config__") and filename.endswith(".json"):
+			appEnv = filename[8:len(filename)-5]
+			appEnvNames.append(appEnv)
+	
+	with open(curStateFile) as file:
+		curState = json.load(file)
+	deploysDict = curState["lastDeploy_byApp"] if "lastDeploy_byApp" in curState else {}
+	maxLen = len(max(appEnvNames, key=len)) # https://www.geeksforgeeks.org/python-longest-string-in-list/
+	print("")
+	print("DEPLOYABLE" + ("." * (maxLen-5)) + "LASTDEPLOY")
+	for appEnv in appEnvNames:
+		deployStr = deploysDict[appEnv] if appEnv in deploysDict else "NO_DATA"
+		print("* " + appEnv + ("." * (maxLen+3-len(appEnv))) + deployStr)
+	print("")
 
 def DeployApp(appEnvName, commitHash, checkSum):
 	if not appEnvName:
@@ -198,6 +224,13 @@ def DeployApp(appEnvName, commitHash, checkSum):
 		file1.write(timeNowIso + " - deployed " + appEnvName + " - " + commitStr + " - \"" + gitSubjShort + "\"\n")
 	print("* Deployment logged in \"" + logsDir + "\"")
 
+	# Log to current state
+	with open(curStateFile) as file:
+		curState = json.load(file)
+	curState.update({ 'lastDeploy_byApp': { appEnvName: commitStr} })
+	with open(curStateFile, 'w') as outfile:
+		json.dump(curState, outfile)
+
 	print("Deploy complete!")
 
 
@@ -220,6 +253,12 @@ if not os.path.isdir(configsDir):
 if not os.path.isdir(logsDir):
 	os.makedirs(logsDir)
 
+
+curStateFile = logsDir + "/currentstate.json"
+if not os.path.isfile(curStateFile):
+	with open(curStateFile, 'w') as file:
+		json.dump({}, file)
+
 # When run directly.
 if __name__ == "__main__":
 	#buildsDir = selfDir + "/../builds/"
@@ -228,8 +267,9 @@ if __name__ == "__main__":
 	commitHash = ""
 	checkSum = ""
 	nocheck = False
+	listMode = False
 	try:
-		opts, args = getopt.getopt(sys.argv[1:], "", ["help", "hash=", "nocheck"])
+		opts, args = getopt.getopt(sys.argv[1:], "l", ["help", "hash=", "nocheck", "list"])
 	except getopt.GetoptError as err:
 		# print help information and exit:
 		print("getopt error: " + str(err))  # will print something like "option -a not recognized"
@@ -238,6 +278,8 @@ if __name__ == "__main__":
 	for o, a in opts:
 		if o in ("-s", "--hash"):
 			commitHash = a
+		if o in ("-l", "--list"):
+			listMode = True
 		elif o == "--nocheck":
 			checkSum = "NOCHECK"
 		else:
@@ -249,5 +291,8 @@ if __name__ == "__main__":
 	if len(args) > 1:
 		checkSum = args[1]
 
-	DeployApp(appEnvName, commitHash, checkSum)
+	if listMode:
+		ListApps()
+	else:
+		DeployApp(appEnvName, commitHash, checkSum)
 
