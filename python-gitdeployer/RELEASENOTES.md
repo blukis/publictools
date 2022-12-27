@@ -1,5 +1,9 @@
 # Release Notes
 
+### 1.2.0 (2022-12-22)
+* Added --list argument, to list deployable configurations.
+* Removed utils1.py, making DEPLOY.py a single-file script.
+
 ### 1.1.0 (2022-12-22)
 * appName, envName replaced by single appEnvName.  DEPLOY.py command now takes one fewer parameter.
 * log files now one-line-per-deployment.

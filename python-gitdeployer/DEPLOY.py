@@ -1,4 +1,4 @@
-# DEPLOY.py - v1.1.0
+# DEPLOY.py - v1.2.0
 # - Desc: Script to make deployments from Virtualmin server prompt interface
 #
 #
