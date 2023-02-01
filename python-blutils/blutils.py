@@ -1,3 +1,6 @@
+# blutils.py - v1.1.0
+# https://github.com/blukis/publictools/tree/main/python-blutils
+
 import sys, os
 import shutil
 import distutils.dir_util

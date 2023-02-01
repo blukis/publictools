@@ -89,7 +89,7 @@ def PullCheckoutGitRepo(gitCmd, repoDir, branchName, cloneUrl):
 		if not cloneUrl:
 			PrintAndQuit("Error, repoDir DNE and cloneUrl unspecified.")
 		if not os.path.isdir(os.path.realpath(repoDir + "/..")):
-			PrintAndQuit("Error, repo parent dir missing. (\"" + os.path.realpath(repoDir + "/..") + "\")")
+			PrintAndQuit("Error, repo parent dir missing (\"" + os.path.realpath(repoDir + "/..") + "\").  Create it, and run again.")
 
 		Subprocess_run2(gitCmd + ["clone", cloneUrl, repoDir], cwd=(selfDir))
 
