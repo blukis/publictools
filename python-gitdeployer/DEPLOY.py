@@ -1,4 +1,6 @@
-# DEPLOY.py - v1.2.0
+# DEPLOY.py - v1.3.0 - https://github.com/blukis/publictools/blob/main/python-gitdeployer/
+VERSION = "1.3.0"
+HOME_URL = "https://github.com/blukis/publictools/blob/main/python-gitdeployer/"
 # - Desc: Script to make deployments from Virtualmin server prompt interface
 #
 #
@@ -7,7 +9,7 @@
 # - "Cannot establish connection to the host." means running in non-interactive shell (e.g. Webmin), and script or subprocess (e.g. git) is requiring user input.
 # 
 # TODO:
-# - Add "--status" that lists deployables + last-deployed.
+# - 
 
 import os, sys, getopt
 import subprocess
@@ -121,21 +123,34 @@ def GitCommitSubject(gitCmd, repoDir):
 	cp = Subprocess_run2(gitCmd + ["log", "--pretty=%s", "-n", "1"], cwd=(repoDir), hideOutput=True)
 	return cp.stdout.decode().strip()
 
-def ListApps():
+def CommitVerStr(gitDate, gitHash): # Str to represent deployed ver e.g. "20230101_1a2b3c4d"
+	commitVerStr = datetime.datetime.strftime(gitDate, '%Y%m%d') + "_" + gitHash[0:8]
+	return commitVerStr
+
+def LoadLastDeployedVer(appName):
+	with open(lastDeploysFile) as file:
+		ldObj = json.load(file)
+	if appName not in ldObj or "commitVerStr" not in ldObj[appName]:
+		return ""
+	return ldObj[appName]["commitVerStr"]
+
+
+def ListDeployables():
 	appEnvNames = []
 	for filename in os.listdir(configsDir):
 		if filename.startswith("config__") and filename.endswith(".json"):
 			appEnv = filename[8:len(filename)-5]
 			appEnvNames.append(appEnv)
-	
-	with open(curStateFile) as file:
-		curState = json.load(file)
-	deploysDict = curState["lastDeploy_byApp"] if "lastDeploy_byApp" in curState else {}
+	if not len(appEnvNames):
+		print("No deployables configured.  Create 'config__xxxx.json' file in configs/.")
+		return
 	maxLen = len(max(appEnvNames, key=len)) # https://www.geeksforgeeks.org/python-longest-string-in-list/
+	maxLen = max(maxLen, 13) # Ensure at least wide enough for headers.
 	print("")
-	print("DEPLOYABLE" + ("." * (maxLen-5)) + "LASTDEPLOY")
+	print("DEPLOYABLE_NAME" + ("." * (maxLen-10)) + "LAST_DEPLOY")
 	for appEnv in appEnvNames:
-		deployStr = deploysDict[appEnv] if appEnv in deploysDict else "NO_DATA"
+		deployStr = LoadLastDeployedVer(appEnv)
+		deployStr = deployStr if deployStr else "NO_DATA"
 		print("* " + appEnv + ("." * (maxLen+3-len(appEnv))) + deployStr)
 	print("")
 
@@ -166,7 +181,7 @@ def DeployApp(appEnvName, commitHash, checkSum):
 	deployToDir = config1["deployToDir"]
 	cloneUrl = config1["cloneUrl"]
 	gitCmd = config1["gitCmd"] if "gitCmd" in config1 else ["git"]
-	repoDir = os.path.normpath(config1["repoDir"])
+	repoDir = selfDir + "/" + os.path.normpath(config1["repoDir"])
 
 	# Pull,checkout latest version from git repo.
 	print("Pull/checkout latest version from repo...")
@@ -181,10 +196,10 @@ def DeployApp(appEnvName, commitHash, checkSum):
 	gitDate = datetime.datetime.strptime(gitDateIso1, '%Y-%m-%d %H:%M:%S %z')
 	gitDateIso2 = gitDate.isoformat()
 	print("")
-	print("Project/app '" + appEnvName + "' last commit:")
-	print("- CommitMsg: \"" + gitSubject + "\"")
-	print("- Date: " + gitDateIso1)
-	print("- Hash: " + gitHash)
+	print("DEPLOY '" + appEnvName + "' - (last deploy: " + str(LoadLastDeployedVer(appEnvName)) + "):")
+	print("- Commit-msg: \"" + gitSubject + "\"")
+	print("- Commit-date: " + gitDateIso1)
+	print("- Commit-hash: " + gitHash)
 	# TODO: warn if age of last commit is > a few days old.?
 
 	print("")
@@ -193,7 +208,7 @@ def DeployApp(appEnvName, commitHash, checkSum):
 	#if answer.lower() != hash[0:3]:
 	#    PrintAndQuit("Deploy cancelled.")
 	if (not checkSum):
-		PrintAndQuit("To deploy this commit, call again with additional hash.left(3) argument.")
+		PrintAndQuit("To deploy, supply additional argument [hash-1st-3-chars].")
 	if (checkSum != gitHash[0:3] and checkSum != "NOCHECK"):
 		PrintAndQuit("hash.left(3) argument does not match current repo.  Aborting!")
 
@@ -210,7 +225,7 @@ def DeployApp(appEnvName, commitHash, checkSum):
 	# DEPLOY to live deployDir, form temporary build dir.
 	print("")
 	print("* DEPLOYING build to deployDir \"" + deployToDir + "\"...")
-	utils1.copyContentsIntoExisting(buildDir, deployToDir)
+	utils1.copyContentsIntoExisting(buildDir, selfDir + "/" + deployToDir)
 
 	# Log the deployment.
 	# If log file DNE, create.
@@ -218,18 +233,19 @@ def DeployApp(appEnvName, commitHash, checkSum):
 	#logFilePath = logsDir + "/" + appName + "__" + envName + ".log"
 	logFilePath = logsDir + "/" + appEnvName + ".log"
 	with open (logFilePath, "a+") as file1:
-		commitStr = datetime.datetime.strftime(gitDate, '%Y%m%d') + "_" + gitHash[0:8]
+		commitVerStr = CommitVerStr(gitDate, gitHash)
 		gitSubjShort = gitSubject[0:40] + ("..." if len(gitSubject) > 40 else "")
-		#file1.write(timeNowIso + " - deployed " + appName + "__" + envName + " - \"" + commitStr + "\"\n")
-		file1.write(timeNowIso + " - deployed " + appEnvName + " - " + commitStr + " - \"" + gitSubjShort + "\"\n")
-	print("* Deployment logged in \"" + logsDir + "\"")
+		logLine = timeNowIso + "\tdeploy\t" + commitVerStr + "\t\"" + gitSubjShort + "\""
+		file1.write(logLine + "\n")
+	print("* Deployment logged in \"" + os.path.relpath(logFilePath, start=selfDir) + "\"")
 
-	# Log to current state
-	with open(curStateFile) as file:
-		curState = json.load(file)
-	curState.update({ 'lastDeploy_byApp': { appEnvName: commitStr} })
-	with open(curStateFile, 'w') as outfile:
-		json.dump(curState, outfile)
+	# Log to lastDeploys file.
+	with open(lastDeploysFile) as file:
+		ldObj = json.load(file)
+	ldObj.update({ appEnvName: { "lastLog": logLine, "timeNowIso": timeNowIso, "commitVerStr": commitVerStr, "gitSubjShort": gitSubjShort, "gitDate": str(gitDate), "gitHash": gitHash } })
+	#ldObj.update({ appEnvName: { "lastLog": logLine } })
+	with open(lastDeploysFile, 'w') as outfile:
+		json.dump(ldObj, outfile)
 
 	print("Deploy complete!")
 
@@ -240,7 +256,7 @@ if sys.version_info[0] < 3:
 	PrintAndQuit("Must be run with Python 3+")
 
 #selfDir = os.path.dirname(sys.argv[0]) + "/"
-selfDir = (os.path.dirname(__file__) if os.path.dirname(__file__) else ".") # "if" for linux, where __file__ is relative.
+selfDir = os.path.abspath(os.path.dirname(__file__)) # abspath for linux where dirname(__file__) is relative path thus can be "".
 logsDir = os.path.normpath(selfDir + "/logs") # No reason for normapth().
 configsDir = os.path.normpath(selfDir + "/configs")
 #print("selfDir3: " + selfDir)
@@ -253,10 +269,9 @@ if not os.path.isdir(configsDir):
 if not os.path.isdir(logsDir):
 	os.makedirs(logsDir)
 
-
-curStateFile = logsDir + "/currentstate.json"
-if not os.path.isfile(curStateFile):
-	with open(curStateFile, 'w') as file:
+lastDeploysFile = logsDir + "/_lastdeploys.json" # Init lastDeploys.
+if not os.path.isfile(lastDeploysFile):
+	with open(lastDeploysFile, 'w') as file:
 		json.dump({}, file)
 
 # When run directly.
@@ -264,35 +279,53 @@ if __name__ == "__main__":
 	#buildsDir = selfDir + "/../builds/"
 	#buildIdStr = "litapp2"
 
+	appEnvName = ""
 	commitHash = ""
 	checkSum = ""
 	nocheck = False
-	listMode = False
+	execMode = ""
 	try:
-		opts, args = getopt.getopt(sys.argv[1:], "l", ["help", "hash=", "nocheck", "list"])
+		opts, args = getopt.getopt(sys.argv[1:], "hlv", ["hash=", "help", "list", "nocheck", "skipcheck", "status", "version"])
 	except getopt.GetoptError as err:
 		# print help information and exit:
 		print("getopt error: " + str(err))  # will print something like "option -a not recognized"
 		#getopt.getopt.usage()
 		sys.exit(2)
 	for o, a in opts:
-		if o in ("-s", "--hash"):
-			commitHash = a
-		if o in ("-l", "--list"):
-			listMode = True
-		elif o == "--nocheck":
-			checkSum = "NOCHECK"
+		if o in ("-h", "--help"):
+			execMode = "help"
+		elif o in ("-v", "--version"):
+			execMode = "version"
+		elif o in ("-l", "--list", "--status"):
+			execMode = "status"
 		else:
-			print("opts error.") #assert False, "unhandled option"
+			if o in ("-s", "--hash"):
+				commitHash = a
+			if o in ("--skipcheck", "--nocheck"): # bypass hash.left(3) check.
+				checkSum = "NOCHECK"
+		#else:
+		#	print("opts error.") #assert False, "unhandled option"
 	if len(args) > 0:
 		appEnvName = args[0]
-	#if len(args) > 1:
-	#	envName = args[1]
 	if len(args) > 1:
 		checkSum = args[1]
 
-	if listMode:
-		ListApps()
+	if execMode == "help":
+		print("Call with no args: output configured deployables list & status.")
+		print("- To deploy, supply additional 'deployable_name' argument.")
+		print("Flags, optional:")
+		print("--hash=xxxx - deploy a specific hash (default:latest).")
+		print("--skipcheck - bypass hash.left(3) check.")
+		#print("--status - list all deployables")
+		PrintAndQuit("More documentation at " + HOME_URL)
+	elif execMode == "version":
+		PrintAndQuit(VERSION)
+	elif execMode == "status" or (not appEnvName):
+		if execMode != "status":
+			print("DEPLOY.py version " + VERSION)
+			print("Supply additional 'deployable_name' argrment. Configured deployables follow.")
+			print("For more options, `DEPLOY.py --help`")
+		ListDeployables()
 	else:
 		DeployApp(appEnvName, commitHash, checkSum)
 

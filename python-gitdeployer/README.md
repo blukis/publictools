@@ -4,13 +4,16 @@ Python script to deploy from a git repository to a local directory.  Deseigned t
 
 ## Usage (WIP)
 1. Place git-deployer directory at destination/web server.
-2. Create deployment config(s) in configs/ dir, from "config__REPONAME__ENVNAME.json" example. (See "configs" section below.)
+2. Create deployment config(s) in configs/ dir, from "config__APPENVNAME.json" example. (See "configs" section below.)
 3. Configure git credentials so "git" command can be run non-interactively.
     - ".git-credentials" method - https://git-scm.com/docs/git-credential-store, https://git-scm.com/docs/gitcredentials, https://techexpertise.medium.com/storing-git-credentials-with-git-credential-helper-33d22a6b5ce7 - `git config --global credential.helper store`
     - For GitHub, access token is pw. (Settings > Developer settings > Personal Access Token > Tokens (classic)).
-4. Run with `python DEPLOY.py APPNAME ENVNAME` (deploys latest commit)
-    - Deploy arbitrary commit: `python DEPLOY.py --hash COMMITHASH APPNAME ENVNAME`
+4. Execute:
+    - `python DEPLOY.py` or `python DEPLOY.py --status` - list available (configured) deployables
+    - Deploy latest commit: `python DEPLOY.py APPENVNAME`
+    - Deploy specific commit `python DEPLOY.py --hash SHORTCOMMITHASH APPENVNAME`
     - (Script will prompt user to execute again with an additional check parameter to confirm deployment.)
+
 
 ## App/environment configs
 - Create deployment config in configs/ dir, with format "config__APPNAME__ENVNAME.json".  APPNAME & ENVNAME are technically arbitrary strings that indicate and app/environment [e.g. "PROD", "DEV", ...] to deploy.  Config top-level properies:
