@@ -1,13 +1,16 @@
 {
-    "// config_vals_for_build_and_deploy": true,
+    "//": "Config vals for GitDeployer",
+    "//": "Dirs are relative to DEPLOY.py; except createBuildCmd cwd=repoDir",
+    "//": "Detailed documentation at https://github.com/blukis/publictools/blob/main/python-gitdeployer/README.md": "",
 
-    "// Optional properties...": true,
+    "//": "Optional properties...",
     "//cloneUrl": "https://github.com/PATH",
+    "//buildCmd_successCode": 0,
 
-    "// Required properties...": true,
+    "//": "Required properties...",
     "repoDir": "repos/REPODIR_OR_ANY_PATH",
     "branchName": "main",
-    "createBuildCmd": ["cp", "-r", "source/"],
+    "createBuildCmd": "cp -r source/ $TEMP_BUILD_DIR",
     "deployToDir": "DST_DEPLOY_DIRECTORY"
 
 }

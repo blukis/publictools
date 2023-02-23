@@ -1,5 +1,5 @@
-# DEPLOY.py - v1.3.0 - https://github.com/blukis/publictools/blob/main/python-gitdeployer/
-VERSION = "1.3.0"
+# DEPLOY.py - v1.3.1 - https://github.com/blukis/publictools/blob/main/python-gitdeployer/
+VERSION = "1.3.1"
 HOME_URL = "https://github.com/blukis/publictools/blob/main/python-gitdeployer/"
 # - Desc: Script to make deployments from Virtualmin server prompt interface
 #
@@ -35,46 +35,54 @@ def PrintAndQuit(msg):
 
 # Append an arg or args to existing command.
 # - cmdOrArgs can be a string (like "rsync -a /source/path/") or arg array (like ["rsync", "-a", "/source/path/"]).
-def cmdAppendArg(cmdOrArgs, appendArg, prequoted=False):
-	if not isinstance(appendArg, str):
-		PrintAndQuit("If appendArg must be a string.")
-	if isinstance(cmdOrArgs, list):
-		#if not isinstance(appendArg, list):
-		#	PrintAndQuit("If cmdOrArgs is a list, appendArg(s) must be a list.")
-		output = cmdOrArgs + [appendArg]
-	elif isinstance(cmdOrArgs, str):
-		output = cmdOrArgs + " " + ('"' + appendArg.replace('"', '\\"') + '"')
-	else:
-		PrintAndQuit("Unsupported cmdOrArgs type.  Must be a string or list.")
-	return output
+#def cmdAppendArg(cmdOrArgs, appendArg, prequoted=False):
+#	if not isinstance(appendArg, str):
+#		PrintAndQuit("If appendArg must be a string.")
+#	if isinstance(cmdOrArgs, list):
+#		#if not isinstance(appendArg, list):
+#		#	PrintAndQuit("If cmdOrArgs is a list, appendArg(s) must be a list.")
+#		output = cmdOrArgs + [appendArg]
+#	elif isinstance(cmdOrArgs, str):
+#		output = cmdOrArgs + " " + ('"' + appendArg.replace('"', '\\"') + '"')
+#	else:
+#		PrintAndQuit("Unsupported cmdOrArgs type.  Must be a string or list.")
+#	return output
 
 
-def Subprocess_run2(cmdOrArgs, cwd=None, hideOutput=False):
+def Subprocess_run2(cmdOrArgs, cwd=None, hideOutput=False, addEnvs={}, expectedRC=None):
 	# Quirks/notes:
 	# - Virtualmin commandline interface doesn't do interactive shells.  subprocess.run() with shell=True output doesn't appear, and process has to finish.  Can't require user input.
 	# - Behaves always like check=True, since we error/halt on returncode!=0.
 	# - capture_output must be True, to do halt-on-error stuff.
 	# - capture_output=True seems to cause the "Cannot establish connection to the host" error in Virtualmin.  Per https://docs.python.org/3/library/subprocess.html, "If you wish to capture and combine both streams into one, use stdout=PIPE and stderr=STDOUT instead of capture_output."
 	# - On cmdOrArgs format and shell=True|False - https://stackoverflow.com/a/15109975
-	#     - tl;dr if cmd(str), shell must be True; if args, shell must be False.
+	#     - i.e. if cmd is str, shell must be True; if args, shell must be False.
 	
-	#print("cmdStr: " + str(cmdStr))
-	#print("* cmd: " + " ".join(cmdOrArgs))
-	#cp = subprocess.run(cmdOrArgs, capture_output=True, shell=False, cwd=cwd)
 	shell = False if isinstance(cmdOrArgs, list) else True
+	
+	my_env = None
+	if addEnvs:
+		my_env = os.environ.copy()
+		my_env.update(addEnvs)
 	try:
-		cp = subprocess.run(cmdOrArgs, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=shell, cwd=cwd)
+		cp = subprocess.run(cmdOrArgs, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=shell, cwd=cwd, env=my_env)
 	except Exception as exn: # Happens in windows "copy filename_DNE src dst".
 		print("***Subprocess threw exception:")
-		print("- cmd: " + str(cmdOrArgs) + "\n- (wd: " + cwd + ") \n- " + str(exn))
+		print("- cmd: " + str(cmdOrArgs) + "\n- (cwd: " + cwd + ") \n- " + str(exn))
 		quit()
 
-	if cp.returncode != 0:
-		print("***Process returned non-zero returncode '" + str(cp.returncode) + "':")
-		print("* cmd: " + str(cmdOrArgs) + "\n- (wd: " + cwd + ")")
-		print('* exit status:', cp.returncode)
+	# If expectedCode is a num && returnCode is different, print error.
+	successRC = expectedRC if expectedRC is not None else 0
+	#print("expectedRC:" + str(type(expectedRC)))
+	#print("cp.returncode:" + str(type(cp.returncode)))
+	if int(cp.returncode) != int(successRC):
+		print("***Process returned unexpected returncode '" + str(cp.returncode) + "' (expected " + str(expectedRC) + ")...")
+		print("* cmd: " + str(cmdOrArgs) + "\n- (cwd: " + cwd + ")")
+		print('* returnCode:', cp.returncode)
 		print('* stdout+stderr:', cp.stdout.decode())
-		#quit() # Cannot quit here e.g. Robocopy success return code is 1, ugh.  Downstream check for empty destination dir will handle issues here.
+		# Cannot quit here, too many edge cases. e.g. Robocopy success return code is 1, ugh.  Downstream check for empty destination dir will handle issues here.
+		# Update: Quit out of caution.  Use expectedRC param to bypass.
+		quit()
 	else:
 		if not hideOutput:
 			if cp.stdout.decode():
@@ -179,8 +187,9 @@ def DeployApp(appEnvName, commitHash, checkSum):
 	branchName = config1["branchName"]
 	createBuildCmd = config1["createBuildCmd"]
 	deployToDir = config1["deployToDir"]
-	cloneUrl = config1["cloneUrl"]
+	cloneUrl = config1["cloneUrl"] if "cloneUrl" in config1 else None
 	gitCmd = config1["gitCmd"] if "gitCmd" in config1 else ["git"]
+	expectedRC = config1["buildCmd_successCode"] if "buildCmd_successCode" in config1 else None
 	repoDir = selfDir + "/" + os.path.normpath(config1["repoDir"])
 
 	# Pull,checkout latest version from git repo.
@@ -210,17 +219,17 @@ def DeployApp(appEnvName, commitHash, checkSum):
 	if (not checkSum):
 		PrintAndQuit("To deploy, supply additional argument [hash-1st-3-chars].")
 	if (checkSum != gitHash[0:3] and checkSum != "NOCHECK"):
-		PrintAndQuit("hash.left(3) argument does not match current repo.  Aborting!")
+		PrintAndQuit("hash.left(3) argument does not match current repo; aborting!")
 
 	# Create build, per project build command, passing tempDir as first partameter (build destination, by convention).
 	tempDir = tempfile.TemporaryDirectory()
 	buildDir = tempDir.name
 	print("Creating build in \"" + buildDir + "\"...")
-	Subprocess_run2(cmdAppendArg(createBuildCmd, buildDir), cwd=repoDir)
+	Subprocess_run2(createBuildCmd, addEnvs={"BUILD_TEMP_DIR": buildDir }, cwd=repoDir, expectedRC=expectedRC)
 
 	# Sanity-check that createBuildCmd actually populated the build dir.
 	if not os.path.isdir(buildDir) or len(os.listdir(buildDir)) == 0:
-		PrintAndQuit("Build dir DNE is is empty (" + buildDir + ")!")
+		PrintAndQuit("Build dir DNE is is empty (" + buildDir + "); aborting!")
 
 	# DEPLOY to live deployDir, form temporary build dir.
 	print("")
