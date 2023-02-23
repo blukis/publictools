@@ -21,17 +21,17 @@ Python script to deploy from a git repository to a local directory.  Deseigned t
     - "cloneUrl": (optional) Will clone this git repository if a local repo doesn't exist.
     - "buildCmd_successCode": (optional) Deployment will be canceled if createBuildCmd return code != 0 (default).  Supply a different value if createBuildCmd returns a less-standard code to indicate success.  (e.g. Robocopy on Windows success return code is 1.)
 
-    - "repoDir": path to local project repository root. Can be a relative path (relative to DEPLOY.py), or absolute path.
+    - "repoDir": path to local project repository dir. Can be an absolute path, or relative (relative to DEPLOY.py).
     - "branchName": git branch to checkout/deploy.
     - "createBuildCmd": custom create-a-build command (string), to be executed with python subprocess.call().  Must reference environment variable "BUILD_TEMP_DIR", and create a build there (Linux:`$BUILD_TEMP_DIR`, Windows:`%BUILD_TEMP_DIR%`).
-        - Executed from cwd=REPO_DIR.
+        - Executed from cwd=repoDir; (relative paths are relative to repoDir).
         - To run multiple commands, insert multiple commands on [one line](https://stackoverflow.com/q/8055371).
         - Examples:
-            1. To just copy files from e.g. repoDir/source, `"cp -r source/$BUILD_TEMP_DIR"`.
+            1. To just copy files from e.g. repoDir/source, `rsync -a source/dir/ $BUILD_TEMP_DIR` or `cp -r source/dir/* $BUILD_TEMP_DIR`.
             2. App has custom build cmd "repoDir/buildMe.py" that takes destination dir as an argument. `"python buildme.py $BUILD_TEMP_DIR"`.
-            3. App has custom build cmd "repoDir/buildMe.py" that creates build in hardcoded destination dir "repoDir/mybuild". `"python buildMe.py ; cp -r mybuild/ $BUILD_TEMP_DIR"`.
+            3. App has custom build cmd "repoDir/buildMe.py" that creates build in hardcoded destination dir "repoDir/mybuild". `"python buildMe.py ; rsync -a mybuild/ $BUILD_TEMP_DIR"`.
         - Notes/quirks on commands for copying dirs:
-            - Note (rsync command): formats can be confusing, see https://stackoverflow.com/a/20301093. (ex: `"rsync -a /source/path/"`, `["rsync", "-a", "/source/path/"]`)
+            - Note (rsync command): formats can be confusing, see https://stackoverflow.com/a/20301093. (ex: `rsync -a source/dir/ $BUILD_TEMP_DIR`)
             - Note (cp command): "*" in cp source path is a shell thing, not a command arg thing. [citation needed].
             - Note: in Windows, "copy" command doesn't seem to work.  Try xcopy, robocopy.
 

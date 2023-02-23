@@ -1,5 +1,5 @@
-# DEPLOY.py - v1.3.1 - https://github.com/blukis/publictools/blob/main/python-gitdeployer/
-VERSION = "1.3.1"
+# DEPLOY.py - v1.3.2 - https://github.com/blukis/publictools/blob/main/python-gitdeployer/
+VERSION = "1.3.2"
 HOME_URL = "https://github.com/blukis/publictools/blob/main/python-gitdeployer/"
 # - Desc: Script to make deployments from Virtualmin server prompt interface
 #
@@ -76,7 +76,7 @@ def Subprocess_run2(cmdOrArgs, cwd=None, hideOutput=False, addEnvs={}, expectedR
 	#print("expectedRC:" + str(type(expectedRC)))
 	#print("cp.returncode:" + str(type(cp.returncode)))
 	if int(cp.returncode) != int(successRC):
-		print("***Process returned unexpected returncode '" + str(cp.returncode) + "' (expected " + str(expectedRC) + ")...")
+		print("***Process returned unexpected returncode '" + str(cp.returncode) + "' (expected " + str(successRC) + ")...")
 		print("* cmd: " + str(cmdOrArgs) + "\n- (cwd: " + cwd + ")")
 		print('* returnCode:', cp.returncode)
 		print('* stdout+stderr:', cp.stdout.decode())
@@ -186,11 +186,11 @@ def DeployApp(appEnvName, commitHash, checkSum):
 
 	branchName = config1["branchName"]
 	createBuildCmd = config1["createBuildCmd"]
-	deployToDir = config1["deployToDir"]
+	deployToDir = os.path.join(selfDir, os.path.expanduser(config1["deployToDir"])) # Rel paths not recommended, but would be rel to selfDir.
 	cloneUrl = config1["cloneUrl"] if "cloneUrl" in config1 else None
 	gitCmd = config1["gitCmd"] if "gitCmd" in config1 else ["git"]
 	expectedRC = config1["buildCmd_successCode"] if "buildCmd_successCode" in config1 else None
-	repoDir = selfDir + "/" + os.path.normpath(config1["repoDir"])
+	repoDir = os.path.join(selfDir, os.path.expanduser(config1["repoDir"])) # Note join() handles repoDir abs/rel well.
 
 	# Pull,checkout latest version from git repo.
 	print("Pull/checkout latest version from repo...")
@@ -234,7 +234,7 @@ def DeployApp(appEnvName, commitHash, checkSum):
 	# DEPLOY to live deployDir, form temporary build dir.
 	print("")
 	print("* DEPLOYING build to deployDir \"" + deployToDir + "\"...")
-	utils1.copyContentsIntoExisting(buildDir, selfDir + "/" + deployToDir)
+	utils1.copyContentsIntoExisting(buildDir, deployToDir)
 
 	# Log the deployment.
 	# If log file DNE, create.
