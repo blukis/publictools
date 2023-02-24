@@ -1,6 +1,6 @@
 # Release Notes
 
-### 1.3.0 (2022-12-22)
+### 1.3.0 (2022-02-21)
 * Calling with no parameters now outputs status
 * Support --help, --version; deprecating --list
 * Support executing from different cwd.
