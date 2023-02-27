@@ -1,4 +1,4 @@
-# blutils.py - v1.1.0
+# blutils.py - v1.1.1
 # https://github.com/blukis/publictools/tree/main/python-blutils
 
 import sys, os
@@ -45,7 +45,7 @@ def copyFileInto(srcPath, dstPath):
 #def CopyDirOverDir(srcDir, dstDir):
 def copyContentsIntoNew(srcDir, dstDir):
 	if not os.path.isdir(srcDir):
-		raise Exception("CopyContentsIntoNew src is not a dir!")
+		raise Exception("CopyContentsIntoNew src is not a dir! (" + srcDir + ")")
 	# shutil.copytree requires dst not yet exist.  This is redundant.
 	if os.path.isdir(dstDir):
 		raise Exception("CopyContentsIntoNew dst exists! (" + dstDir + ")")
@@ -63,7 +63,7 @@ def copyContentsIntoExisting(srcDir, dstDir):
 # Copy contents of dir into another dir.  dstDir created if DNE.
 def copyContentsInto(srcDir, dstDir):
 	if not os.path.isdir(srcDir):
-		raise Exception("CopyContentsInto src is not a dir!")
+		raise Exception("CopyContentsInto src is not a dir! (" + srcDir + ")")
 	# former (requires dstDir is empty): shutil.copytree(srcDir, dstDir)
 	distutils.dir_util.copy_tree(srcDir, dstDir)
 
