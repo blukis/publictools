@@ -35,4 +35,4 @@ Python script to deploy from a git repository to a local directory.  Deseigned t
             - Note (cp command): "*" in cp source path is a shell thing, not a command arg thing. [citation needed].
             - Note: in Windows, "copy" command doesn't seem to work.  Try xcopy, robocopy.
 
-    - "deployToDir": final deploy destination on the server.
+    - "deployToDir": final deploy destination on the server.  Absolute path recommended.

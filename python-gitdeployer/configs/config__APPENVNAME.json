@@ -1,13 +1,17 @@
 {
-    "//": "Config vals for GitDeployer",
-    "//": "Dirs are relative to DEPLOY.py; except createBuildCmd cwd=repoDir",
-    "//": "Detailed documentation at https://github.com/blukis/publictools/blob/main/python-gitdeployer/README.md",
+    "//": "Config values for GitDeployer 1.3.3",
+    "//": "More documentation at https://github.com/blukis/publictools/blob/main/python-gitdeployer/README.md",
 
     "//": "Optional properties...",
+    "//": "- cloneUrl: git repo url to clone from, not needed if repoDir is already a git repo.",
+    "//": "- buildCmd_successCode: If createBuildCmd return code is something other than '0' to indicate success, override with this parameter.",
     "//cloneUrl": "https://github.com/PATH",
     "//buildCmd_successCode": 0,
 
     "//": "Required properties...",
+    "//": "- repoDir, branchName: repo/branch to git pull from; relative paths are relative to DEPLOY.py",
+    "//": "- createBuildCmd: command string, run from repoDir, to create a build.  Must include the destination dir as env variable 'TEMP_BUILD_DIR'.  Relative path is relative to repoDir.",
+    "//": "- deployToDir: Once build command completes, build is copied from $TEMP_BUILD_DIR to this final (live) destination.  Absolute path recommended.",
     "repoDir": "repos/REPODIR_OR_ANY_PATH",
     "branchName": "main",
     "createBuildCmd": "rsync -a source/ $TEMP_BUILD_DIR",

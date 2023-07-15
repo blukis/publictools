@@ -1,5 +1,18 @@
 # Release Notes
 
+### 1.3.3 (2023-07-15)
+* Output, wording, formatting changes
+* Support experimental "--printlogexp" option
+
+### 1.3.2 (2023-02-23)
+* Calling with no parameters now outputs status;
+* Support --help, --version; deprecating --list;
+* Support executing from different cwd.;
+* BREAKING: Made createBuildCmd take/require BUILD_TEMP_DIR env variable;
+* support buildCmd_successCode, Subprocess_run2() quits in unexpected returncode.
+* cloneURL now properly optional.
+* fixed config paths, support "~/" paths; minor output fix
+
 ### 1.2.0 (2022-12-22)
 * Added --list argument, to list deployable configurations.
 * Removed utils1.py, making DEPLOY.py a single-file script.

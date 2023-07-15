@@ -1,5 +1,5 @@
-# DEPLOY.py - v1.3.2 - https://github.com/blukis/publictools/blob/main/python-gitdeployer/
-VERSION = "1.3.2"
+# DEPLOY.py - v1.3.3 - https://github.com/blukis/publictools/blob/main/python-gitdeployer/
+VERSION = "1.3.3"
 HOME_URL = "https://github.com/blukis/publictools/blob/main/python-gitdeployer/"
 # - Desc: Script to make deployments from Virtualmin server prompt interface
 #
@@ -132,15 +132,25 @@ def GitCommitSubject(gitCmd, repoDir):
 	return cp.stdout.decode().strip()
 
 def CommitVerStr(gitDate, gitHash): # Str to represent deployed ver e.g. "20230101_1a2b3c4d"
-	commitVerStr = datetime.datetime.strftime(gitDate, '%Y%m%d') + "_" + gitHash[0:8]
+	commitVerStr = gitHash[0:8] + "(" + datetime.datetime.strftime(gitDate, '%Y%m%d') + ")"
 	return commitVerStr
 
-def LoadLastDeployedVer(appName):
+def LoadLastDeployedObj(appName):
 	with open(lastDeploysFile) as file:
 		ldObj = json.load(file)
-	if appName not in ldObj or "commitVerStr" not in ldObj[appName]:
-		return ""
-	return ldObj[appName]["commitVerStr"]
+	return ldObj[appName] if appName in ldObj else {}
+
+def LoadLastDeployedVer(appName):
+	aldObj = LoadLastDeployedObj(appName)
+	return aldObj["commitVerStr"] if "commitVerStr" in aldObj else ""
+
+def PrintLastNDeploys(appEnvName, n):
+	appLogFile = logsDir + "/" + appEnvName + ".log"
+	with open(appLogFile) as file:
+		lines = file.readlines()
+	lastN = lines[-n:]
+	for line in lastN:
+		print("  " + line.strip())
 
 
 def ListDeployables():
@@ -155,12 +165,12 @@ def ListDeployables():
 	maxLen = len(max(appEnvNames, key=len)) # https://www.geeksforgeeks.org/python-longest-string-in-list/
 	maxLen = max(maxLen, 13) # Ensure at least wide enough for headers.
 	print("")
-	print("DEPLOYABLE_NAME" + ("." * (maxLen-10)) + "LAST_DEPLOY")
+	print("DEPLOYABLE_NAME" + ("." * (maxLen-10)) + "LAST_DEPLOYMENT")
 	for appEnv in appEnvNames:
 		deployStr = LoadLastDeployedVer(appEnv)
 		deployStr = deployStr if deployStr else "NO_DATA"
 		print("* " + appEnv + ("." * (maxLen+3-len(appEnv))) + deployStr)
-	print("")
+	#print("")
 
 def DeployApp(appEnvName, commitHash, checkSum):
 	if not appEnvName:
@@ -204,12 +214,20 @@ def DeployApp(appEnvName, commitHash, checkSum):
 	gitDateIso1 = GitDateIso(gitCmd, repoDir)
 	gitDate = datetime.datetime.strptime(gitDateIso1, '%Y-%m-%d %H:%M:%S %z')
 	gitDateIso2 = gitDate.isoformat()
+	lastDeployObj = LoadLastDeployedObj(appEnvName)
+	deployedTime = lastDeployObj["timeNowIso"] if "timeNowIso" in lastDeployObj else "??"
 	print("")
-	print("DEPLOY '" + appEnvName + "' - (last deploy: " + str(LoadLastDeployedVer(appEnvName)) + "):")
-	print("- Commit-msg: \"" + gitSubject + "\"")
-	print("- Commit-date: " + gitDateIso1)
-	print("- Commit-hash: " + gitHash)
+	print("Last deployed ver: \"" + str(LoadLastDeployedVer(appEnvName)) + "\" - deployed at " + deployedTime)
+	print("")
+	print("Latest commit:")
+	print("  - Commit-msg: \"" + gitSubject + "\"")
+	print("  - Commit-date: " + gitDateIso1)
+	print("  - Commit-hash: " + gitHash)
 	# TODO: warn if age of last commit is > a few days old.?
+	if printLog:
+		print("")
+		print("Recent deployments (10):")
+		PrintLastNDeploys(appEnvName, 10)
 
 	print("")
 	#print("DEPLOY the above commit to \"" + deployToDir + "\"?") # Disabled: can't ask for user input, in non-interactive-shell environment (Webmin/Virtualmin).
@@ -217,7 +235,7 @@ def DeployApp(appEnvName, commitHash, checkSum):
 	#if answer.lower() != hash[0:3]:
 	#    PrintAndQuit("Deploy cancelled.")
 	if (not checkSum):
-		PrintAndQuit("To deploy, supply additional argument [hash-1st-3-chars].")
+		PrintAndQuit("To deploy latest commit, supply additional argument [1st-3-chars-of-hash].")
 	if (checkSum != gitHash[0:3] and checkSum != "NOCHECK"):
 		PrintAndQuit("hash.left(3) argument does not match current repo; aborting!")
 
@@ -293,8 +311,9 @@ if __name__ == "__main__":
 	checkSum = ""
 	nocheck = False
 	execMode = ""
+	printLog = False
 	try:
-		opts, args = getopt.getopt(sys.argv[1:], "hlv", ["hash=", "help", "list", "nocheck", "skipcheck", "status", "version"])
+		opts, args = getopt.getopt(sys.argv[1:], "hv", ["hash=", "help", "nocheck", "skipcheck", "status", "printlogexp", "version"])
 	except getopt.GetoptError as err:
 		# print help information and exit:
 		print("getopt error: " + str(err))  # will print something like "option -a not recognized"
@@ -305,13 +324,15 @@ if __name__ == "__main__":
 			execMode = "help"
 		elif o in ("-v", "--version"):
 			execMode = "version"
-		elif o in ("-l", "--list", "--status"):
+		elif o in ("--status"):
 			execMode = "status"
 		else:
 			if o in ("-s", "--hash"):
 				commitHash = a
 			if o in ("--skipcheck", "--nocheck"): # bypass hash.left(3) check.
 				checkSum = "NOCHECK"
+			if o in ("--printlogexp"):
+				printLog = True
 		#else:
 		#	print("opts error.") #assert False, "unhandled option"
 	if len(args) > 0:
@@ -320,21 +341,26 @@ if __name__ == "__main__":
 		checkSum = args[1]
 
 	if execMode == "help":
-		print("Call with no args: output configured deployables list & status.")
-		print("- To deploy, supply additional 'deployable_name' argument.")
-		print("Flags, optional:")
-		print("--hash=xxxx - deploy a specific hash (default:latest).")
-		print("--skipcheck - bypass hash.left(3) check.")
-		#print("--status - list all deployables")
-		PrintAndQuit("More documentation at " + HOME_URL)
+		print("Usage: DEPLOY.py [options] [deployablename] [hash3chrs]")
+		print("")
+		print("Options:")
+		print("  -h, --help    Show this message")
+		print("  -v, --version Output DEPLOY.py version only")
+		print("  --hash=xxxx   Deploy a specific hash (default:latest).")
+		print("  --skipcheck   Bypass hash.left(3) check.")
+		print("  --printlogexp (experimental) output 10 recent deployments from log")
+		print("")
+		PrintAndQuit("To configure deployables, and more info, see " + HOME_URL)
 	elif execMode == "version":
 		PrintAndQuit(VERSION)
 	elif execMode == "status" or (not appEnvName):
 		if execMode != "status":
-			print("DEPLOY.py version " + VERSION)
-			print("Supply additional 'deployable_name' argrment. Configured deployables follow.")
-			print("For more options, `DEPLOY.py --help`")
+			print("DEPLOY.py version " + VERSION + " -- for options, `DEPLOY.py --help`")
+			#print("Supply additional 'deployable_name' argrment. Configured deployables follow.")
+			#print("For more options, `DEPLOY.py --help`")
 		ListDeployables()
+		print("")
+		print("To make a deployment, supply additional argument [deployablename].")
 	else:
 		DeployApp(appEnvName, commitHash, checkSum)
 
