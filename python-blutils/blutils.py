@@ -1,4 +1,4 @@
-# blutils.py - v1.1.2
+# blutils.py - v1.1.3
 # https://github.com/blukis/publictools/tree/main/python-blutils
 
 import sys, os
@@ -26,28 +26,28 @@ def printAndQuit(msg):
 # Copy file to (over) another file.  If dstPath exists, it must be a file.
 def copyFileAs(srcPath, dstPath):
 	if not os.path.isfile(srcPath):
-		raise Exception("CopyFileAs src is not a file!")
+		raise Exception("copyFileAs src is not a file! (" + srcPath + ")")
 	# dst must not yet exist, or be a file (to overwrite).
 	if os.path.exists(dstPath) and not os.path.isfile(dstPath):
-		raise Exception("CopyFileAs dst exists, but is not a file!")
+		raise Exception("copyFileAs dst exists, but is not a file! (" + dstPath + ")")
 	shutil.copy2(srcPath, dstPath)
 
 # Copy file into an existing dir.  srcPath must be a file; dstPath must be a dir.
 def copyFileInto(srcPath, dstPath):
 	if not os.path.isfile(srcPath):
-		raise Exception("CopyFileInto src is not a file! (" + srcPath + ")")
+		raise Exception("copyFileInto src is not a file! (" + srcPath + ")")
 	if not os.path.isdir(dstPath):
-		raise Exception("CopyFileInto dst is not a dir! (" + dstPath + ")")
+		raise Exception("copyFileInto dst is not a dir! (" + dstPath + ")")
 	shutil.copy2(srcPath, dstPath)
 
 # Copy contents of dir into a new dir.  dstDir must not yet exist.
 #def CopyDirOverDir(srcDir, dstDir):
 def copyContentsIntoNew(srcDir, dstDir):
 	if not os.path.isdir(srcDir):
-		raise Exception("CopyContentsIntoNew src is not a dir! (" + srcDir + ")")
+		raise Exception("copyContentsIntoNew src is not a dir! (" + srcDir + ")")
 	# shutil.copytree below requires dst not yet exist.  This check is redundant, but explicit.
 	if os.path.isdir(dstDir):
-		raise Exception("CopyContentsIntoNew dst exists! (" + dstDir + ")")
+		raise Exception("copyContentsIntoNew dst exists! (" + dstDir + ")")
 	shutil.copytree(srcDir, dstDir)
 	# There's also: "distutils.dir_util.copy_tree()", but it allows for an existing dstDir.
 
