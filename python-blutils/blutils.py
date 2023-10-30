@@ -1,14 +1,13 @@
-# blutils.py - v1.1.1
+# blutils.py - v1.1.2
 # https://github.com/blukis/publictools/tree/main/python-blutils
 
 import sys, os
 import shutil
-import distutils.dir_util
+# import distutils.dir_util # removed, due to python std library removal after 3.3 https://stackoverflow.com/a/25372045
 #import json
 #import datetime
 
-# Just for getRandomString().
-import string
+import string # Just for getRandomString().
 import random
 
 
@@ -33,7 +32,7 @@ def copyFileAs(srcPath, dstPath):
 		raise Exception("CopyFileAs dst exists, but is not a file!")
 	shutil.copy2(srcPath, dstPath)
 
-# Copy file into an existing dir.
+# Copy file into an existing dir.  srcPath must be a file; dstPath must be a dir.
 def copyFileInto(srcPath, dstPath):
 	if not os.path.isfile(srcPath):
 		raise Exception("CopyFileInto src is not a file! (" + srcPath + ")")
@@ -46,27 +45,29 @@ def copyFileInto(srcPath, dstPath):
 def copyContentsIntoNew(srcDir, dstDir):
 	if not os.path.isdir(srcDir):
 		raise Exception("CopyContentsIntoNew src is not a dir! (" + srcDir + ")")
-	# shutil.copytree requires dst not yet exist.  This is redundant.
+	# shutil.copytree below requires dst not yet exist.  This check is redundant, but explicit.
 	if os.path.isdir(dstDir):
 		raise Exception("CopyContentsIntoNew dst exists! (" + dstDir + ")")
 	shutil.copytree(srcDir, dstDir)
-	# There's also: "distutils.dir_util.copy_tree()".  (Why?)
+	# There's also: "distutils.dir_util.copy_tree()", but it allows for an existing dstDir.
 
-# Copy contents of dir into an existing dir.  dstDir need not be empty.
+# Copy contents of dir into an existing dir.  dstDir must exist, and need not be empty.
 def copyContentsIntoExisting(srcDir, dstDir):
 	if not os.path.isdir(srcDir):
-		raise Exception("CopyContentsInto src is not a dir! (" + srcDir + ")")
+		raise Exception("copyContentsIntoExisting src is not a dir! (" + srcDir + ")")
 	if not os.path.isdir(dstDir):
-		raise Exception("CopyContentsInto dst is not a dir! (" + dstDir + ")")
-	distutils.dir_util.copy_tree(srcDir, dstDir)
+		raise Exception("copyContentsIntoExisting dst is not a dir! (" + dstDir + ")")
+	# distutils.dir_util.copy_tree(srcDir, dstDir) # (removed from python std library after 3.3.)
+	shutil.copytree(srcDir, dstDir, dirs_exist_ok=True)
 
-# Copy contents of dir into another dir.  dstDir created if DNE.
+# Copy contents of dir into another dir. dstDir created if DNE.
+# (Permissive combination of "copyContentsIntoNew" and "copyContentsIntoExisting".)
 def copyContentsInto(srcDir, dstDir):
 	if not os.path.isdir(srcDir):
 		raise Exception("CopyContentsInto src is not a dir! (" + srcDir + ")")
-	# former (requires dstDir is empty): shutil.copytree(srcDir, dstDir)
-	distutils.dir_util.copy_tree(srcDir, dstDir)
-
+	# was: shutil.copytree(srcDir, dstDir) # removed, (requires dstDir is empty).
+	# was: distutils.dir_util.copy_tree(srcDir, dstDir) # (removed from python std library after 3.3.)
+	shutil.copytree(srcDir, dstDir, dirs_exist_ok=True)
 
 # json load/loads(), that strips full-line comments. (First non-whitespace chrs are "//".)
 # Incomplete (no midline "//", nor "/* ... */", but better than nothing.  May be extended in the future.)
