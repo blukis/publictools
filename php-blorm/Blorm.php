@@ -1,27 +1,31 @@
 <?php
-//
-// Database interface class - https://github.com/blukis/blorm/
+// Blorm.php - v1.0.2
+// Database interface class - https://github.com/blukis/publictools/tree/main/php-blorm
 //
 class Blorm {
 
 	public $conn;
+	private $db_server;
+	private $db_user;
+	private $db_pass;
+	private $db_dbname;
 	
 	// $opts e.g. = ["host"=>'host1', "username"=>'user1', "password"=>'pass1', "database"=>'db1']
-	// - If values not provided, will attempt to lookup values by calling global env() 
-	//   function (which is assumed to exist) with keys "DB_HOST", "DB_USERNAME", ...
+	// - If values not provided, will attempt to lookup values by calling getenv() 
+	//   function with keys "DB_HOST", "DB_USERNAME", ...
 	// - "DB_" prefix can be overriden by passing $opts = {"env_prefix": "NEWPREFIX_"}.
 	function __construct($opts=null) {
 		$opts = $opts ? $opts : [];
 		$prefix = isset($opts["env_prefix"]) ? $opts["env_prefix"] : "DB_";
-		// Get values from $opts, or alternately env() lookup.
-		$this->db_server = isset($opts["host"]) ? $opts["host"] : env($prefix . "HOST");
-		$this->db_user = isset($opts["username"]) ? $opts["username"] : env($prefix . "USERNAME");
-		$this->db_pass = isset($opts["password"]) ? $opts["password"] : env($prefix . "PASSWORD");
-		$this->db_dbname = isset($opts["database"]) ? $opts["database"] : env($prefix . "DATABASE");
+		// Get values from $opts, or alternately getenv().
+		$this->db_server = isset($opts["host"]) ? $opts["host"] : getenv($prefix . "HOST");
+		$this->db_user = isset($opts["username"]) ? $opts["username"] : getenv($prefix . "USERNAME");
+		$this->db_pass = isset($opts["password"]) ? $opts["password"] : getenv($prefix . "PASSWORD");
+		$this->db_dbname = isset($opts["database"]) ? $opts["database"] : getenv($prefix . "DATABASE");
 	}
 
 	public static function create($opts=false) {
-		$db = new GuDatabase($opts);
+		$db = new Blorm($opts);
 		return $db;
 	}
 
@@ -77,7 +81,7 @@ class Blorm {
 	/*// First result row only, or (null) if no rows returned.
 	public function firstRowOrNull($sql) {
 		$rows = $this->queryResults($sql, 1);
-		return sizeof($rows) ? $rows[0] : null;
+		return count($rows) ? $rows[0] : null;
 	}
 	// First result row only. (Errors if no rows returned.)
 	public function firstRow($sql) {
@@ -98,7 +102,7 @@ class Blorm {
 	// First cell of first row only, or $errorVal if no rows are returned.
 	public function firstCellOrVal($sql, $noRowsVal) {
 		$rows = $this->queryResults($sql, 1);
-		return sizeof($rows) ? $rows[0][array_key_first($rows[0])] : $noRowsVal;
+		return count($rows) ? $rows[0][array_key_first($rows[0])] : $noRowsVal;
 	}
 
 
@@ -140,7 +144,6 @@ class Blorm {
 
 		throw new Exception("Error converting value to bit.");
 	}
-
 
 	// Convert string array to SQL list expression, with proper string-escaping. ["str1", "str2"] => "('string1', 'string2')"
 	// - Useful for SQL 'IN' operator.
